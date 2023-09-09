@@ -1,0 +1,89 @@
+
+# 1- BPV riscalate
+BPVs=t(as.matrix(sqrt(BPV/N))) # serve a standardizzare i rendimenti
+# 2- divido ogni giorno per la corrispondente BPV
+m1=matrix(rep(BPVs,N),ncol=ncol(BPVs),byrow=TRUE)
+rs1=r/m1
+# 3- calcolo le radici delle medie per riga sui quadrati e standardizzo
+nM=sqrt(rowMeans(rs1^2))
+nM=nM/sqrt(mean(nM^2))
+nM=as.matrix(nM)
+# 4- standardizzo i rendimenti
+m2=matrix(rep(nM,T),ncol=T,byrow=FALSE)
+rs2=r/m2
+
+# sulle serie standardizzate rifaccio i test per i salti
+# Stima RV
+RV1=colSums(rs2^2)
+# Stima BPV
+ar=abs(rs2)
+arr=ar[2:N,] * ar[1:(N-1),]
+mu1=sqrt(2/pi)
+BPV1=colSums(arr)*(N/(N-1))*(mu1)^(-2)
+# quad-power
+theta=pi*pi/4+pi-5
+ar4=ar[4:(N-1),]*ar[3:(N-1),]*ar[2:(N-2),]*ar[1:(N-3),]
+QPQ1=colSums(ar4)*(N-1)*(mu1^(-4))
+
+# BNS test (Huang-Tauchen)
+T=NROW(RV1)
+V2=QPQ1/(BPV1^2)
+V1=(V2>1)*V2+(V2<=1)*1
+BNS=(((RV1-BPV1)/RV1)*sqrt(N))/sqrt(theta*V1)
+a=qnorm(0.999)
+sum(BNS>a)
+tsplot(RV-BPV1)
+
+
+# test ABD a livello intraday sui rendimenti filtrati
+# 1- BPV riscalate
+ar=abs(rs2)
+arr=ar[2:N,] * ar[1:(N-1),]
+mu1=sqrt(2/pi)
+BPV=colSums(arr)*(N/(N-1))*(mu1)^(-2)
+BPVs=t(as.matrix(sqrt(BPV/N)))
+# 2- divido ogni giorno per la corrispondente BPV
+m1=matrix(rep(BPVs,N),ncol=ncol(BPVs),byrow=TRUE)
+rs3=rs2/m1
+# 3- individuazione dei valori sulle code
+beta=1-(1-(10^(-5)))^(1/N)
+idJ=abs(rs3)>qnorm(1-beta/2)
+
+# plot numero salti per giorno e per intervallo
+plot.ts(rowSums(idJ))
+sum(rowSums(idJ))
+plot.ts(colSums(idJ))
+
+# decomposizione RV in CV e J2, in GV e BV,in CV+,CV-,J2+,J2-
+J2POS=colSums(((r^2)*idJ)*(r>0))
+J2NEG=colSums(((r^2)*idJ)*(r<0))
+J2=J2POS+J2NEG
+CVPOS=colSums(((r^2)*(1-idJ))*(r>0))
+CVNEG=colSums(((r^2)*(1-idJ))*(r<0))
+CV=CVPOS+CVNEG
+# controllo correttezza
+test=RV-CV-J2
+par(mfrow=c(2,2))
+
+
+RV_rs2 = colSums(rs2^2)
+J2POS_rs2=colSums(((rs2^2)*idJ)*(rs2>0))
+J2NEG_rs2=colSums(((rs2^2)*idJ)*(rs2<0))
+J2_rs2=J2POS_rs2+J2NEG_rs2
+CVPOS_rs2=colSums(((rs2^2)*(1-idJ))*(rs2>0))
+CVNEG_rs2=colSums(((rs2^2)*(1-idJ))*(rs2<0))
+CV_rs2=CVPOS_rs2+CVNEG_rs2
+test_rs2=RV-CV_rs2-J2_rs2
+
+CV=xts(x=CV,order.by=date_vec)
+J2=xts(x=J2,order.by=date_vec)
+CV_rs2=xts(x=CV_rs2,order.by=date_vec)
+J2_rs2=xts(x=J2_rs2,order.by=date_vec)
+plot(CV, main = "CV")
+plot(J2, main = "J2")
+plot(CV_rs2, main = "CV filtrato")
+plot(J2_rs2, main = "J2 filtrato")
+
+
+
+
