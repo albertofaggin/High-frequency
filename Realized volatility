@@ -1,0 +1,64 @@
+
+load("CRM1secdata.RData")
+
+######## Estimation of realized volatility with 1-minute frequency data #######
+
+RV=colSums(secdata^2)
+m=c(60)
+N=dim(secdata)[1]
+T=dim(secdata)[2]
+mm=median(RV)
+d=diag(1,N/m,N/m) %x% t(rep(1,m))
+r=d %*% secdata
+N=dim(r)[1]
+
+# Estimation RV
+RV=colSums(r^2)
+
+# Graphic representation 
+tsplot(RV, main = " Realized volatility with 1-minute frequency")
+
+################################ Signature plot ################################
+
+RV=colSums(secdata^2)
+m=c(2,5,10,30,60,120,180,300,600)
+N=dim(secdata)[1]
+T=dim(secdata)[2]
+mm=median(RV)
+for (i in m){
+  d=diag(1,N/i,N/i) %x% t(rep(1,i))
+  r=d %*% secdata
+  RVl=colSums(r^2)
+  RV=cbind(RV,RVl)
+  mm=cbind(mm,median(RVl))
+}
+xts(mm)
+m=c(1,2,5,10,30,60,120,180,300,600)
+RV.table = cbind(m,t(mm))
+
+tsplot(t(mm), type = "o", col  = "black", ylim = c(0.00020,0.00032))
+# two time scales
+kall=c(30,60,120,180,300)
+RV2=NULL
+tw = NULL
+for (j in 1:5){
+  k=kall[j]
+  m=N/k
+  mav=apply(secdata,2,rollsum,k) 
+  RV1=NULL
+  for (i in 1:k){
+    id=seq((i+1),(N-k+1),by=k)
+    locr=mav[id,]
+    RV1=cbind(RV1,colSums(locr^2))
+  }
+  RV1=rowMeans(RV1)
+  RV2=cbind(RV2, RV1 - (1/k)*RV[,1])
+  tw=cbind(tw,median(RV2))
+}
+
+tw1 = c(0,0,0,0,tw)
+tw_sub <- subset(tw1,  seq_along(tw1)>=5)
+
+lines(5:length(tw1), tw_sub, type = "o", col = "red")
+legend("topright", legend = c("RV", "Two-time scale RV"), col = c("black", "red"), pch = c(1, 1))
+
