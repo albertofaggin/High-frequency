@@ -1,0 +1,48 @@
+############################# Jumps individuation #############################
+
+load("CRM1secdata.RData")
+
+RV=colSums(secdata^2)
+  m=c(60)
+  N=dim(secdata)[1]
+  T=dim(secdata)[2]
+  mm=median(RV)
+  d=diag(1,N/m,N/m) %x% t(rep(1,m))
+  r=d %*% secdata
+  N=dim(r)[1]
+  
+  # Estimation RV
+  RV=colSums(r^2)
+
+################################## Estimation BPV ###################################
+
+
+ar=abs(r) 
+arr=ar[2:N,] * ar[1:(N-1),]
+mu1=sqrt(2/pi)
+BPV=colSums(arr)*(N/(N-1))*(mu1)^(-2) 
+
+tsplot(RV-BPV, main = "RV-BPV")
+max(RV)
+
+indici = which((RV-BPV) > 0.0001)
+length(indici)
+points(indici, (RV-BPV)[indici], col="red")
+
+############################### Estimation quad power ###############################
+theta=pi*pi/4+pi-5
+ar4=ar[4:N,]*ar[3:(N-1),]*ar[2:(N-2),]*ar[1:(N-3),]
+QPQ=colSums(ar4)*N*(mu1^(-4))
+
+
+########################### BNS test (Huang-Tauchen) ###########################
+T=NROW(RV)
+V2=QPQ/(BPV^2)
+V1=(V2>1)*V2+(V2<=1)*1
+BNS=(((RV-BPV)/RV)*sqrt(N))/sqrt(theta*V1)
+tsplot(BNS)
+a=qnorm(0.999)
+sum(BNS>a)
+
+mN=rowMeans(ar)
+
