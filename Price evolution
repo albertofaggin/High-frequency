@@ -1,0 +1,158 @@
+library("quantmod")
+library("astsa")
+library("readxl")
+library("tidyverse")
+library("fImport")
+library("fBasics")
+library("rugarch")
+library("highfrequency")
+library("xts")
+library("zoo")
+library("chron")
+
+################################################################################
+################################ Lettura dati ##################################
+################################################################################
+
+
+z =read.table("CRM.txt",sep=",")
+
+# Osservo i dati che ho a disposizione
+head(z, 20)
+#            V1       V2       V3       V4      V5      V6    V7
+# 1  01/02/2018 09:30:00 102.8800 103.0000 102.880 102.990 70798
+# 2  01/02/2018 09:30:01 102.7900 102.7900 102.640 102.790  3095
+# 3  01/02/2018 09:30:02 102.7700 102.7700 102.770 102.770   200
+# 4  01/02/2018 09:30:15 102.6477 102.6477 102.620 102.620   300
+#5  01/02/2018 09:30:22 102.6300 102.6300 102.630 102.630   100
+
+POPC=cbind(z$V3,z$V6)
+
+dt=paste(z$V1,z$V2,sep=" ")
+# [1] "01/02/2018 09:30:00" "01/02/2018 09:30:01" "01/02/2018 09:30:02"
+# [4] "01/02/2018 09:30:15" "01/02/2018 09:30:22" "01/02/2018 09:30:31"
+# [7] "01/02/2018 09:30:41" "01/02/2018 09:30:42" "01/02/2018 09:30:52"
+# [10] "01/02/2018 09:31:00" "01/02/2018 09:31:01" "01/02/2018 09:31:04"
+
+dt=as.POSIXct(dt,tz="","%m/%d/%Y %H:%M:%OS")
+# [1] "2018-01-02 09:30:00 CET" "2018-01-02 09:30:01 CET" "2018-01-02 09:30:02 CET"
+# [4] "2018-01-02 09:30:15 CET" "2018-01-02 09:30:22 CET" "2018-01-02 09:30:31 CET"
+# [7] "2018-01-02 09:30:41 CET" "2018-01-02 09:30:42 CET" "2018-01-02 09:30:52 CET"
+# [10] "2018-01-02 09:31:00 CET" "2018-01-02 09:31:01 CET" "2018-01-02 09:31:04 CET"
+
+db=xts(x=POPC,order.by=dt)
+#                        [,1]    [,2]
+# 2018-01-02 09:30:00 102.8800 102.990
+# 2018-01-02 09:30:01 102.7900 102.790
+# 2018-01-02 09:30:02 102.7700 102.770
+# 2018-01-02 09:30:15 102.6477 102.620
+# 2018-01-02 09:30:22 102.6300 102.630
+
+# elimino i valori fuori dall'orario in cui possono essere effettuati i traiding
+dbtday = db["T09:30:00/T15:59:59"] 
+
+
+################################################################################
+#################### Evoluzione dei prezzi e dei rendimenti ####################
+################################################################################
+
+################# Grafico serie dei prezzi - dati ad un secondo ################
+
+# Per osservare la serie dei prezzi è necessario correggere ed inserire i dati mancanti.
+# Per fare questo utilizzo un ciclo in cui creo un vettore di NA per ogni secondo
+# di un dato giorno
+
+datenow = as.Date("2017-12-31")
+secdata = NULL
+secprice = NULL
+secday = NULL
+for(i in 1:1826) {
+  # definisco il giorno
+  datenow=datenow+1
+  # definisco range e creo vettore di zeri
+  st=paste(as.character(datenow),"9:30:00",sep=" ")
+  ed=paste(as.character(datenow),"15:59:59",sep=" ")
+  test=seq(as.POSIXct(st),as.POSIXct(ed),by="sec") # per il giorno datenow creo un vettore di tempi
+  # per ogni secondo in cui la borsa è aperta
+  # dalle 9:30:00 alle 15:59:59
+  testx=xts(matrix(0,23400,1),test) # crea una colonna di 0 per ogni osservazione
+  # selezione dati del giorno
+  testx.NA=xts(matrix(NA,23400,1),test)
+  selday=dbtday[as.character(datenow)]
+  # calcolo log-rendimenti
+  N=nrow(selday)
+  if(N>0) {
+    p = c( as.numeric(selday[1,1]),as.numeric(selday[2:N,2]))
+    testx.NA[index(selday)]=p
+    price = na.locf(testx.NA, xout=test )
+    dtx.NA = as.numeric(price)
+    secprice=cbind(secprice,dtx.NA)
+    secdayprice = vec(secprice)
+  }
+}
+
+# Osservo la serie dei prezzi corretta
+tsplot(secdayprice)
+
+################### Grafico serie dei prezzi - dati a 5 minuti #################
+
+# data la matrice "secprice", che rappresenta una matrice dove ogni colonna 
+# rappresenta il giorno, mentre nelle righe sono presenti le osservazioni, cioè
+# i prezzi in ogni secondo. Per i dati a 5 minuti, siamo interessati alla 300-esima
+# osservazione e i suoi multipli. Quindi per selezionare i dati è possibile tranquillamente
+# selezionare direttamente la riga 300 e i suoi multipli per avere i dati a 
+# frequenza 5 minuti
+
+matrix.5 = secprice[seq(300, nrow(secprice), by = 300), ]
+tsplot(vec(matrix.5))
+
+
+################# Grafico serie dei rendimenti - dati a 5 minuti ###############
+
+
+# loop sui giorni dell'anno - tutti, poi si tolgono i festivi
+# totale giorni 365+365+366+365+365
+datenow = as.Date("2017-12-31")
+secdata = NULL
+secprice = NULL
+secday = NULL
+for(i in 1:1826) {
+  # definisco il giorno
+  datenow=datenow+1
+  # definisco range e creo vettore di zeri
+  st=paste(as.character(datenow),"9:30:00",sep=" ")
+  ed=paste(as.character(datenow),"15:59:59",sep=" ")
+  test=seq(as.POSIXct(st),as.POSIXct(ed),by="sec") # per il giorno datenow creo un vettore di tempi
+  # per ogni secondo in cui la borsa è aperta
+  # dalle 9:30:00 alle 15:59:59
+  testx=xts(matrix(0,23400,1),test) # crea una colonna di 0 per ogni osservazione
+  # selezione dati del giorno
+  testx.NA=xts(matrix(NA,23400,1),test)
+  selday=dbtday[as.character(datenow)]
+  # calcolo log-rendimenti
+  N=nrow(selday)
+  if(N>0) {
+    # rendimenti
+    r=c( log(as.numeric(selday[1,2]))-log(as.numeric(selday[1,1])), log(as.numeric(selday[2:N,2]))-log(as.numeric(selday[1:(N-1),2])))
+    testx[index(selday)]=r
+    dtx=as.numeric(testx)
+    secdata=cbind(secdata,dtx)
+    # salvare qui i giorni nei quali vi sono trades per costruire poi la sequenza di date
+    secday=cbind(secday,datenow)
+  }
+}
+
+# dai dati sui rendimenti corretti, cioè avendo gestito i dati mancanti, è possibile
+# calcolare i rendimenti per i dati a 5 minuti
+
+m=c(300)
+N=dim(secdata)[1]
+T=dim(secdata)[2]
+mm=median(RV)
+d=diag(1,N/m,N/m) %x% t(rep(1,m))
+r=d %*% secdata
+N=dim(r)[1]
+
+# Stima e grafico dei rendimenti a 5 minuti
+rend=colSums(r)
+tsplot(rend, main = "Rendimenti a 5 minuti")
