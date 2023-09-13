@@ -1,14 +1,14 @@
-################################################################################
-############################ HOMEWORK N.1 - CASO CRM ###########################
-################################################################################
+###################################################### ################################
+############################ HOMEWORK N.1 - CRM CASE ############### #############
+###################################################### ################################
 
-############################### Carico librerie ################################
+################################ Loading libraries ################# ###############
 library("quantmod")
 library("astsa")
-library("readxl")
+libraries("readxl")
 library("tidyverse")
 library("fImport")
-library("fBasics")
+libraries("fBasics")
 library("rugarch")
 library("highfrequency")
 library("xts")
@@ -16,21 +16,19 @@ library("zoo")
 library("chron")
 library("forecast")
 
-################################################################################
-################################ Analiti tecnica ###############################
-################################################################################
+################################## Technical analytes ###############################
 load("CRM1secprice.RData")
 
 
-## Prezzi giornalieri
+## Daily prices
 matrix.1 = secprice[seq(23400, nrow(secprice), by = 23400), ]
 price_1 = vec(matrix.1)
 
 
-################################ Indicatore ROC ################################
+################################## ROC Indicator #################################
 h = 5
 
-# Indicatore per prezzi giornalieri
+# Indicator for daily prices
 
 n = 1259
 
@@ -40,7 +38,7 @@ tsplot(roc[500:700])
 tsplot(price_1[500:700])
 par(mfrow=c(1,1))
 
-# Indicatore per prezzi ad un secondo
+# Indicator for one-second prices
 
 n = length(secdayprice)
 h = 5*23400
@@ -49,28 +47,28 @@ t = 6*23400
 roc = 100*(secdayprice[t:n]-secdayprice[(t-h):(n-h)])/(secdayprice[(t-h):(n-h)])
 
 
-{############# Inserire le date alla serie dei prezzi che considero #############
+{############# Insert the dates to the price series that I consider ##############
 
 #install.packages("quantmod")
 library(quantmod)
 
-# Definisco il simbolo di un'azienda quotata in borsa 
+# I define the symbol of a publicly traded company
 symbol <- "CRM"
 
-# Ottiengo i dati storici del prezzo delle azioni dell'azienda quotata in borsa
+# I get the historical stock price data of the publicly traded company
 getSymbols(symbol, from = "2018-01-02", to = "2022-12-31")
 
-# Estraggo i dati del prezzo di chiusura delle azioni
+# I extract the closing price data of the shares
 prices <- Ad(get(symbol))
 
-# Estraggo un vettore di date dai dati del prezzo di chiusura delle azioni
+# I extract a vector of dates from the stock closing price data
 date_vec <- index(prices)
 }
 
 
-## Rappresentazioni grafiche dati giornalieri
+## Graphical representations of daily data
 
-baseline = rep(0,1259)
+baseline = rep(0.1259)
 baseline_d=xts(x=baseline,order.by=date_vec)
 ma_price = ma(price_1[200:555], order = 22)
 ma_price_d=xts(x=ma_price,order.by=date_vec[200:555])
@@ -88,16 +86,16 @@ plot(price_1_d[205:555], main = "Price curve")
 lines(ma_price_d, col = "purple", type = "l")
 
 
-## Rappresentazioni grafiche dati ad 1 secondo
+## Graphical representations of data at 1 second
 
 roc_set = roc[4680000:12870000]
 price = secdayprice[4680000:12870000]
-date_vec_rep = sort(rep(date_vec,23400))
+date_old_rep = sort(rep(date_old,23400))
 date_vec_rep = date_vec_rep[4680000:12870000]
 ma_price = ma(price, order = 514800)
 ma_price_d=xts(x=ma_price,order.by=date_vec_rep)
 
-baseline = rep(0,8190001)
+baseline = rep(0.8190001)
 baseline_d=xts(x=baseline,order.by=date_vec_rep)
 
 roc_set_d=xts(x=roc_set,order.by=date_vec_rep)
@@ -111,5 +109,3 @@ par(mfrow=c(1,1))
 
 plot(price_1_d[205:555], main = "Price curve")
 lines(ma_price_d, col = "purple", type = "l")
-
-
