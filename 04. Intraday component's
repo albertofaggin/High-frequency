@@ -1,26 +1,25 @@
-
-# 1- BPV riscalate
-BPVs=t(as.matrix(sqrt(BPV/N))) # serve a standardizzare i rendimenti
-# 2- divido ogni giorno per la corrispondente BPV
+#1- Rescaled BPVs
+BPVs=t(as.matrix(sqrt(BPV/N))) # serves to standardize the returns
+#2- I divide each day by the corresponding BPV
 m1=matrix(rep(BPVs,N),ncol=ncol(BPVs),byrow=TRUE)
 rs1=r/m1
-# 3- calcolo le radici delle medie per riga sui quadrati e standardizzo
+#3- I calculate the roots of the means per row on the squares and standardize
 nM=sqrt(rowMeans(rs1^2))
 nM=nM/sqrt(mean(nM^2))
 nM=as.matrix(nM)
-# 4- standardizzo i rendimenti
+#4- I standardize returns
 m2=matrix(rep(nM,T),ncol=T,byrow=FALSE)
 rs2=r/m2
 
-# sulle serie standardizzate rifaccio i test per i salti
-# Stima RV
+# on the standardized series I redo the jump tests
+# RV estimate
 RV1=colSums(rs2^2)
-# Stima BPV
+# BPV estimate
 ar=abs(rs2)
 arr=ar[2:N,] * ar[1:(N-1),]
 mu1=sqrt(2/pi)
 BPV1=colSums(arr)*(N/(N-1))*(mu1)^(-2)
-# quad-power
+# quad power
 theta=pi*pi/4+pi-5
 ar4=ar[4:(N-1),]*ar[3:(N-1),]*ar[2:(N-2),]*ar[1:(N-3),]
 QPQ1=colSums(ar4)*(N-1)*(mu1^(-4))
@@ -35,33 +34,33 @@ sum(BNS>a)
 tsplot(RV-BPV1)
 
 
-# test ABD a livello intraday sui rendimenti filtrati
-# 1- BPV riscalate
+# ABD test at intraday level on filtered returns
+#1- Rescaled BPVs
 ar=abs(rs2)
 arr=ar[2:N,] * ar[1:(N-1),]
 mu1=sqrt(2/pi)
 BPV=colSums(arr)*(N/(N-1))*(mu1)^(-2)
 BPVs=t(as.matrix(sqrt(BPV/N)))
-# 2- divido ogni giorno per la corrispondente BPV
+#2- I divide each day by the corresponding BPV
 m1=matrix(rep(BPVs,N),ncol=ncol(BPVs),byrow=TRUE)
 rs3=rs2/m1
-# 3- individuazione dei valori sulle code
+#3- identifying the values on the queues
 beta=1-(1-(10^(-5)))^(1/N)
 idJ=abs(rs3)>qnorm(1-beta/2)
 
-# plot numero salti per giorno e per intervallo
+# plot number of jumps per day and per interval
 plot.ts(rowSums(idJ))
 sum(rowSums(idJ))
 plot.ts(colSums(idJ))
 
-# decomposizione RV in CV e J2, in GV e BV,in CV+,CV-,J2+,J2-
+# RV decomposition into CV and J2, into GV and BV, into CV+,CV-,J2+,J2-
 J2POS=colSums(((r^2)*idJ)*(r>0))
 J2NEG=colSums(((r^2)*idJ)*(r<0))
 J2=J2POS+J2NEG
 CVPOS=colSums(((r^2)*(1-idJ))*(r>0))
 CVNEG=colSums(((r^2)*(1-idJ))*(r<0))
 CV=CVPOS+CVNEG
-# controllo correttezza
+# correctness check
 test=RV-CV-J2
 par(mfrow=c(2,2))
 
@@ -81,9 +80,5 @@ CV_rs2=xts(x=CV_rs2,order.by=date_vec)
 J2_rs2=xts(x=J2_rs2,order.by=date_vec)
 plot(CV, main = "CV")
 plot(J2, main = "J2")
-plot(CV_rs2, main = "CV filtrato")
-plot(J2_rs2, main = "J2 filtrato")
-
-
-
-
+plot(CV_rs2, main = "Filtered CV")
+plot(J2_rs2, main = "J2 filtered")
